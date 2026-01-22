@@ -1,18 +1,26 @@
-import { DashboardData, Transaction } from '../types';
+import { DataPayload } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL;
+// URL extraída de tu código HTML
+const API_URL = "https://script.google.com/macros/s/AKfycbxEni9GJ4gxmbhmNsbzoYxS_SfhcorqsXj4zh93-qWIy5i2R4jwvgJ8L25GcU3h3Bkh/exec";
 
 export const api = {
-  getDashboardData: async (): Promise<DashboardData> => {
-    const res = await fetch(API_URL);
-    return await res.json();
-  },
+  sync: async (payload?: DataPayload) => {
+    try {
+      const options: RequestInit = {
+        method: payload ? 'POST' : 'GET',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      };
+      
+      if (payload) {
+        options.body = JSON.stringify(payload);
+      }
 
-  saveTransaction: async (tx: Transaction) => {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify(tx)
-    });
-    return await res.json();
+      const response = await fetch(API_URL, options);
+      if (!response.ok) throw new Error('Error de red');
+      return await response.json();
+    } catch (error) {
+      console.error("Sync error:", error);
+      throw error;
+    }
   }
 };

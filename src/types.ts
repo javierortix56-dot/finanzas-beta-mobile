@@ -14,8 +14,5 @@ export interface Transaction {
 
 export interface DataPayload {
   txs: Transaction[];
-  cats: {
-    inc: string[];
-    exp: string[];
-  };
+  cats: { inc: string[]; exp: string[]; };
 }

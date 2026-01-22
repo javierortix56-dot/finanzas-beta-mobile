@@ -5,16 +5,17 @@
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "allowJs": false,
     "skipLibCheck": true,
-    "esModuleInterop": false,
+    "esModuleInterop": true, // Cambiado a true
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Node", // O "Bundler" si usas Vite 5+
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx", // Esto soluciona los errores de JSX IntrinsicElements
+    "types": ["vite/client"] // Esto soluciona el error de import.meta.env
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

@@ -1,6 +1,5 @@
 import { DataPayload } from '../types';
 
-// URL extraída de tu código HTML
 const API_URL = "https://script.google.com/macros/s/AKfycbxEni9GJ4gxmbhmNsbzoYxS_SfhcorqsXj4zh93-qWIy5i2R4jwvgJ8L25GcU3h3Bkh/exec";
 
 export const api = {

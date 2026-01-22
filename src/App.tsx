@@ -1,95 +1,129 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart2, Wallet, Settings, User, Plus } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Wallet, ChartPie, Plus, RefreshCw } from 'lucide-react';
 import Dashboard from './screens/Dashboard';
-import Insights from './screens/Insights';
-import Allocation from './screens/Allocation';
 import AddTransaction from './screens/AddTransaction';
-import Savings from './screens/Savings';
-import Story from './screens/Story';
-import Categories from './screens/Categories';
-import { api } from './services/api'; 
-import { DashboardData } from './types';
+import { api } from './services/api';
+import { Transaction, DataPayload } from './types';
 
-export type ScreenType = 'dashboard' | 'insights' | 'allocation' | 'savings' | 'story' | 'categories';
+// Datos iniciales por defecto
+const INITIAL_DATA: DataPayload = {
+  txs: [],
+  cats: { 
+    exp: ['Esenciales', 'Deudas', 'Comida', 'Salidas', 'Varios'], 
+    inc: ['Sueldo', 'Ventas', 'Otros'] 
+  }
+};
 
 export default function App() {
-  const [activeScreen, setActiveScreen] = useState<ScreenType>('dashboard');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [view, setView] = useState<'home' | 'stats'>('home');
+  const [showAdd, setShowAdd] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<DataPayload>(INITIAL_DATA);
+  const [usdRate, setUsdRate] = useState(1200); // Valor por defecto
 
+  // Cargar datos al inicio
   useEffect(() => {
-    loadRealData();
+    const storedRate = localStorage.getItem('usdRate');
+    if (storedRate) setUsdRate(Number(storedRate));
+    handleSync();
   }, []);
 
-  const loadRealData = async () => {
+  const handleSync = async () => {
     setLoading(true);
     try {
-        const result = await api.getDashboardData();
-        setData(result);
-    } catch(e) {
-        console.error(e);
+      const cloudData = await api.sync();
+      if (cloudData && cloudData.txs) {
+        setData(cloudData);
+      }
+    } catch (e) {
+      alert("Error sincronizando. Verifica tu conexión.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const navigate = (screen: ScreenType) => {
-    setActiveScreen(screen);
-    window.scrollTo(0, 0);
+  const handleSaveTx = async (tx: Transaction) => {
+    const newData = { ...data, txs: [...data.txs, tx] };
+    setData(newData); // Actualización optimista
+    setShowAdd(false);
+    try {
+      await api.sync(newData);
+    } catch (e) {
+      console.error("Error guardando en nube");
+    }
   };
 
-  const handleSaveTransaction = async (tx: any) => {
-    await api.saveTransaction(tx);
-    await loadRealData(); 
-    setShowAddModal(false);
+  const handleRateChange = (newRate: number) => {
+    setUsdRate(newRate);
+    localStorage.setItem('usdRate', newRate.toString());
   };
-
-  if (loading && !data) return (
-    <div className="flex h-screen items-center justify-center bg-[#f8fafb] dark:bg-[#15161e] text-[#40826c] font-bold animate-pulse">
-      Cargando tus finanzas...
-    </div>
-  );
 
   return (
-    <div className="bg-background-light dark:bg-background-dark min-h-screen font-display text-slate-900 dark:text-white pb-20">
-      
-      {activeScreen === 'dashboard' && data && <Dashboard data={data} onNavigate={navigate} />}
-      {activeScreen === 'insights' && <Insights onNavigate={navigate} />}
-      {activeScreen === 'allocation' && <Allocation onNavigate={navigate} />}
-      {activeScreen === 'savings' && <Savings onNavigate={navigate} />}
-      {activeScreen === 'story' && <Story onNavigate={navigate} />}
-      {activeScreen === 'categories' && <Categories onNavigate={navigate} />}
-
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-0">
-          <AddTransaction onClose={() => setShowAddModal(false)} onSave={handleSaveTransaction} />
+    <div className="min-h-screen bg-[#F8FAFC] pb-24 pt-[60px]">
+      {/* Header Glass */}
+      <header className="fixed top-0 w-full h-[60px] glass z-40 flex items-center justify-between px-5">
+        <div className="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+          J&M 
+          <div className={`w-2 h-2 rounded-full transition-colors ${loading ? 'bg-yellow-400 animate-pulse' : 'bg-green-500'}`} />
         </div>
+        <button onClick={handleSync} className="p-2 text-slate-400">
+          <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </header>
+
+      {/* Vistas */}
+      <main>
+        {view === 'home' ? (
+          <Dashboard 
+            data={data} 
+            usdRate={usdRate} 
+            onRateChange={handleRateChange} 
+          />
+        ) : (
+          <div className="p-5 text-center text-slate-500 mt-10">
+            <ChartPie className="w-16 h-16 mx-auto mb-4 opacity-20" />
+            <p>Sección de estadísticas avanzadas en desarrollo</p>
+          </div>
+        )}
+      </main>
+
+      {/* Modal Agregar Transacción */}
+      {showAdd && (
+        <AddTransaction 
+          onClose={() => setShowAdd(false)} 
+          onSave={handleSaveTx}
+          cats={data.cats}
+          incomes={data.txs.filter(t => t.type === 'income' && !t.deletedAt)}
+          usdRate={usdRate}
+        />
       )}
 
-      {!['story', 'add'].includes(activeScreen) && !showAddModal && (
-        <div className="fixed bottom-0 left-0 w-full z-40 pointer-events-none">
-           <div className="absolute bottom-[88px] right-6 pointer-events-auto">
-              <button onClick={() => setShowAddModal(true)} className="w-14 h-14 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
-                <Plus size={30} />
-              </button>
-           </div>
+      {/* Navegación Inferior Glass */}
+      <nav className="fixed bottom-0 w-full h-[80px] glass z-40 flex justify-around items-center pb-4">
+        <button 
+          onClick={() => setView('home')}
+          className={`flex flex-col items-center gap-1 transition-all ${view === 'home' ? 'text-slate-900 -translate-y-1' : 'text-slate-300'}`}
+        >
+          <Wallet className="w-6 h-6" />
+          <span className="text-[10px] font-bold">Home</span>
+        </button>
 
-            <div className="w-full pointer-events-auto border-t border-slate-200/50 dark:border-slate-800/50 pb-safe pt-2 px-6 h-[84px] flex justify-between items-start bg-white/80 dark:bg-[#15161e]/80 backdrop-blur-xl">
-                <NavBtn icon={<User size={24} />} label="Home" active={activeScreen === 'dashboard'} onClick={() => navigate('dashboard')} />
-                <NavBtn icon={<BarChart2 size={24} />} label="Stats" active={activeScreen === 'insights'} onClick={() => navigate('insights')} />
-                <div className="w-16"></div>
-                <NavBtn icon={<Wallet size={24} />} label="Wallet" active={activeScreen === 'allocation'} onClick={() => navigate('allocation')} />
-                <NavBtn icon={<Settings size={24} />} label="Settings" active={activeScreen === 'categories'} onClick={() => navigate('categories')} />
-            </div>
-        </div>
-      )}
+        {/* FAB (Botón Flotante) */}
+        <button 
+          onClick={() => setShowAdd(true)}
+          className="w-14 h-14 bg-[#0F172A] rounded-2xl text-white flex items-center justify-center shadow-xl shadow-slate-900/40 -translate-y-6 border-4 border-[#F8FAFC] active:scale-95 transition-transform"
+        >
+          <Plus className="w-7 h-7" />
+        </button>
+
+        <button 
+          onClick={() => setView('stats')}
+          className={`flex flex-col items-center gap-1 transition-all ${view === 'stats' ? 'text-slate-900 -translate-y-1' : 'text-slate-300'}`}
+        >
+          <ChartPie className="w-6 h-6" />
+          <span className="text-[10px] font-bold">Stats</span>
+        </button>
+      </nav>
     </div>
   );
 }
-
-const NavBtn = ({ icon, label, active, onClick }: any) => (
-  <button onClick={onClick} className={`flex flex-col items-center gap-1 p-2 w-16 group ${active ? 'text-primary' : 'text-slate-400'}`}>
-    {React.cloneElement(icon, { strokeWidth: active ? 2.5 : 2 })}
-    <span className="text-[10px] font-bold">{label}</span>
-  </button>
-);

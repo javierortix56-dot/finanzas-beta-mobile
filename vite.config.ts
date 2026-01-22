@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/finanzas-beta-mobile/', // Debe coincidir con el nombre de tu repo
+  base: '/finanzas-beta-mobile/', 
 })

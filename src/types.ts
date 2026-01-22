@@ -1,14 +1,14 @@
 export interface Transaction {
   id: number;
   date: string;
-  amount: number;      // Monto final en ARS
-  origAmt: number;     // Monto original (ej. en USD)
+  amount: number;
+  origAmt: number;
   curr: 'ARS' | 'USD';
   type: 'income' | 'expense';
   cat: string;
   desc: string;
-  exec: boolean;       // Si está "ejecutado" (tasa congelada)
-  linkId?: number | null; // ID del ingreso al que está vinculado
+  exec: boolean;
+  linkId?: number | null;
   deletedAt?: number;
 }
 
